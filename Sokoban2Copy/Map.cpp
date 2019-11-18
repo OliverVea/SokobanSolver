@@ -1,5 +1,7 @@
 #include "Map.h"
 
+Dictionary<tile_t, Map::eTileType> Map::dic;
+
 Map::Map(const std::vector<eTileType>& map, const std::vector<pos_t>& targetPositions, const pos_t& width, const pos_t& height, const State& initialState) : 
 	map(map), directions({-1, 1, -width, width}), targetPositions(targetPositions), width(width), height(height), initialState(initialState)
 { }
@@ -9,7 +11,9 @@ Map::~Map()
 
 const bool Map::hasWon(const State& state) const
 {
-	for (pos_t targetPosition : targetPositions) if (!state.containsBox(targetPosition)) return false;
+	for (pos_t targetPosition : targetPositions) 
+		if (!state.containsBox(targetPosition))
+			return false;
 	return true;
 }
 
@@ -51,7 +55,7 @@ std::vector<pos_t> Map::getConnectedArea(const pos_t& position, const State& sta
 	return Map::getConnectedArea(position, state, map, width);
 }
 
-std::vector<Map::State> Map::getChildStates(const State& parentState)
+const std::vector<Map::State> Map::getChildStates(const State& parentState) const
 {
 	std::vector<Map::State> newStates;
 	std::vector<pos_t> freeNeighbors = getNeighbors(parentState.playerPos, map, width, {eFree, eNobox});
@@ -63,7 +67,7 @@ std::vector<Map::State> Map::getChildStates(const State& parentState)
 		if (!parentState.containsBox(newPlayerPos)) newStates.push_back(newState);
 		else {
 			pos_t newBoxPos = newPlayerPos + dir;
-			if (newBoxPos >= 0 && newBoxPos < map.size() && !parentState.containsBox(newBoxPos) && contains(map[newBoxPos], {eFree})) {
+			if (newBoxPos >= 0 && newBoxPos < map.size() && !parentState.containsBox(newBoxPos) && map[newBoxPos] == eFree ) {
 				std::replace(newState.boxPositions.begin(), newState.boxPositions.end(), newPlayerPos, newBoxPos);
 				newStates.push_back(newState);
 			}
@@ -103,8 +107,9 @@ const bool Map::isFree(const pos_t& pos) const
 	return map[pos] != eWall;
 }
 
-Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec, std::unordered_map<tile_t, eTileType> dic)
+Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec)
 {
+	std::unordered_map<tile_t, eTileType> dic = Map::dic.getB();
 	pos_t height = (pos_t)mapVec.size(), width;
 	std::vector<eTileType> map;
 	std::vector<pos_t> targetPositions;
@@ -122,9 +127,9 @@ Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec, std::unordered_
 
 				map[index] = eFree;
 				if (tile == eWall) map[index] = eWall;
-				else if (tile == eTarget || tile == eBoxOnTarget) targetPositions.push_back(index);
-				else if (tile == ePlayer) initialState.playerPos = index;
-				else if (tile == eBox || tile == eBoxOnTarget) initialState.boxPositions.push_back(index);
+				if (tile == eTarget || tile == eBoxOnTarget) targetPositions.push_back(index);
+				if (tile == eBox || tile == eBoxOnTarget) initialState.boxPositions.push_back(index);
+				if (tile == ePlayer) initialState.playerPos = index;
 			}
 		}
 	}
@@ -187,7 +192,9 @@ Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec, std::unordered_
 		for (pos_t y = 0; y < height; y++) {
 			pos_t i = x + y * width;
 
-			if (map[i] == eFree) {
+			bool isTarget = (std::find(targetPositions.begin(), targetPositions.end(), i) != targetPositions.end());
+
+			if (map[i] == eFree && !isTarget) {
 				std::vector<pos_t> neighbors = getNeighbors(i, map, width, {eFree, eNobox});
 
 				if (neighbors.size() == 2) { // If point has 2 neighbors.
@@ -201,12 +208,20 @@ Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec, std::unordered_
 	return Map(map, targetPositions, width, height, initialState);
 }
 
-void Map::printMap(const Map& map, std::unordered_map<eTileType, tile_t> dic, const pos_t & width)
+void Map::printMap(const Map& map, const State& state, const pos_t & width)
 {
+	std::unordered_map<eTileType, tile_t> dic = Map::dic.getA();
+
 	for (pos_t i = 0; i < map.map.size(); i++) {
 		pos_t x = i % width, y = i / width;
 
-		if (std::find(map.targetPositions.begin(), map.targetPositions.end(), i) != map.targetPositions.end()) std::cout << 'X';
+		bool isTarget = (std::find(map.targetPositions.begin(), map.targetPositions.end(), i) != map.targetPositions.end());
+		bool isBox = state.containsBox(i);
+
+		if (isTarget && isBox) std::cout << dic[eBoxOnTarget];
+		else if (isTarget) std::cout << dic[eTarget];
+		else if (isBox) std::cout << dic[eBox];
+		else if (i == state.playerPos) std::cout << dic[ePlayer];
 		else std::cout << dic[map.map[i]];
 		if (x == width - 1) std::cout << std::endl;
 	}
@@ -237,7 +252,7 @@ const heu_t Map::State::getHeuristic() const
 	return currentExpense + futureExpense;
 }
 
-const hash_t Map::State::getHash(const pos_t maxPos) const
+const hash_t Map::State::getHash() const
 {
 	hash_t result = std::to_string(playerPos);
 	result += "," + std::to_string(playerDir);
@@ -247,10 +262,23 @@ const hash_t Map::State::getHash(const pos_t maxPos) const
 	return result;
 }
 
-Map::State Map::State::fromHash(hash_t val, const pos_t& maxPos)
+Map::State Map::State::fromHash(hash_t val)
 {
+	if (val == "") return Map::State();
 	State result;
-	throw(" ");
+	std::vector<std::string> elements;
+	std::string temp = "";
+	for (char c : val) {
+		if (c == ',') {
+			elements.push_back(temp);
+			temp = "";
+		}
+		else temp += c;
+	}
+	elements.push_back(temp);
+	result.playerPos = std::stoi(elements[0]);
+	result.playerDir = std::stoi(elements[1]);
+	for (int i = 2; i < elements.size(); i++) result.boxPositions.push_back(std::stoi(elements[i]));
 	return result;
 }
 

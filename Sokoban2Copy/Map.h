@@ -1,5 +1,6 @@
 #pragma once
 #include "Defs.h"
+#include "Dictionary.h"
 
 #include <vector>
 #include <unordered_map>
@@ -20,8 +21,8 @@ public:
 
 		const heu_t getHeuristic() const; // Returns currentExpense + futureExpense.
 
-		const hash_t getHash(const pos_t maxPos) const;
-		static State fromHash(hash_t val, const pos_t& maxPos);
+		const hash_t getHash() const;
+		static State fromHash(hash_t val);
 
 		static bool comparison(const State& a, const State& b);
 
@@ -29,7 +30,8 @@ public:
 		const bool containsBox(pos_t position) const;
 
 		const State move(dir_t direction) const;
-	};
+	}; 
+	static Dictionary<tile_t, Map::eTileType> dic;
 
 	struct StateComparison {
 		bool operator()(const State& a, const State& b) {
@@ -48,7 +50,7 @@ public:
 	pos_t getFirstPosInConnectedArea(const pos_t& position, const State& state);
 	std::vector<pos_t> getConnectedArea(const pos_t& position, const State& state);
 
-	std::vector<Map::State> getChildStates(const State& parentState);
+	const std::vector<Map::State> getChildStates(const State& parentState) const;
 	const pos_t getMaxPos() const;
 	const State getInitialState() const;
 
@@ -58,8 +60,8 @@ public:
 	static const bool isFree(const pos_t& pos, const std::vector<eTileType>& map);
 	const bool isFree(const pos_t& pos) const;
 
-	static Map loadMap(const std::vector<std::vector<tile_t>>& map, std::unordered_map<tile_t, eTileType> dic);
-	static void printMap(const Map& map, std::unordered_map<eTileType, tile_t> dic, const pos_t& width);
+	static Map loadMap(const std::vector<std::vector<tile_t>>& map);
+	static void printMap(const Map& map, const State& state, const pos_t& width);
 	static std::vector<pos_t> getNeighbors(const pos_t& position, const std::vector<eTileType>& map, const pos_t& width, const std::vector<eTileType>& tiles);
 	static bool contains(const eTileType& tile, const std::vector<eTileType>& tiles);
 

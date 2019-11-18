@@ -1,7 +1,8 @@
 #pragma once
 #include <string>
+#include <vector>
 
-#define THREAD_COUNT 3
+#define THREAD_COUNT 64
 
 /* -- TYPEDEFS -- */
 typedef unsigned short int pos_t;
@@ -16,3 +17,15 @@ namespace costs {
 	const heu_t fullturn = 2;
 	const heu_t forward = 1;
 }
+
+const std::vector<std::vector<tile_t>> mapString({
+	{'#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#'},
+	{'#', 'X', ' ', 'X', '#', ' ', ' ', ' ', ' ', ' ', '#', '#'},
+	{'#', ' ', ' ', '#', '#', 'C', 'C', ' ', 'C', ' ', '#', '#'},
+	{'#', ' ', ' ', 'X', '#', ' ', ' ', '#', ' ', ' ', ' ', '#'},
+	{'#', ' ', ' ', ' ', ' ', ' ', ' ', '#', 'C', ' ', ' ', '#'},
+	{'#', ' ', ' ', 'X', '#', ' ', ' ', '#', 'P', ' ', ' ', '#'},
+	{'#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#'}
+	});
+
+const pos_t mapWidth = 12;

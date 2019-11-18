@@ -1,29 +1,17 @@
 #include "IDepthFirst.h"
-#include "Dictionary.h"
 
 int main() {
-	std::vector<std::vector<tile_t>> mapString({
-		{'#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#'},
-		{'#', 'X', ' ', 'X', '#', ' ', ' ', ' ', ' ', ' ', '#', '#'},
-		{'#', ' ', ' ', '#', '#', 'C', 'C', ' ', 'C', ' ', '#', '#'},
-		{'#', ' ', ' ', 'X', '#', ' ', ' ', '#', ' ', ' ', ' ', '#'},
-		{'#', ' ', ' ', ' ', ' ', ' ', ' ', '#', 'C', ' ', ' ', '#'},
-		{'#', ' ', ' ', 'X', '#', ' ', ' ', '#', 'P', ' ', ' ', '#'},
-		{'#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#', '#'}
-	});
 
-	Dictionary<tile_t, Map::eTileType> dic;
-	dic.add(' ', Map::eFree);
-	dic.add('#', Map::eWall);
-	dic.add('P', Map::ePlayer);
-	dic.add('X', Map::eTarget);
-	dic.add('V', Map::eTarget);
-	dic.add('C', Map::eBox);
-	dic.add('-', Map::eNobox);
+	Map::dic = Dictionary<tile_t, Map::eTileType>();
+	Map::dic.add(' ', Map::eFree);
+	Map::dic.add('#', Map::eWall);
+	Map::dic.add('P', Map::ePlayer);
+	Map::dic.add('X', Map::eTarget);
+	Map::dic.add('V', Map::eBoxOnTarget);
+	Map::dic.add('C', Map::eBox);
+	Map::dic.add('-', Map::eNobox);
 
-	Map map = Map::loadMap(mapString, dic.getB());
-
-	Map::printMap(map, dic.getA(), 12);
+	Map map = Map::loadMap(mapString);
 
 	Map::State state = map.getInitialState();
 
@@ -31,6 +19,12 @@ int main() {
 	size_t stateSize = sizeof(state);
 
 	std::vector<Map::State> solution = IDepthFirst::solve(map, state);
+
+	for (Map::State s : solution) {
+		Map::printMap(map, s, mapWidth);
+		std::this_thread::sleep_for(std::chrono::milliseconds(250));
+		system("cls");
+	}
 
 	return 0;
 }
