@@ -2,6 +2,8 @@
 
 std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state)
 {
+	Stopwatch sw;
+	sw.start("totalTime");
 	std::mutex a, b;
 	std::unordered_map<hash_t, std::pair<heu_t, hash_t>> pastBest;
 	std::priority_queue<Map::State, std::vector<Map::State>, Map::StateComparison> openSet;
@@ -53,7 +55,8 @@ std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state)
 
 	std::reverse(solution.begin(), solution.end());
 
-	std::cout << "Found solution with " << solution.size() << " steps after searching " << pastBest.size() << " states." << std::endl;
+	sw.stop("totalTime");
+	std::cout << "Found solution with " << solution.size() << " steps after searching " << pastBest.size() << " states. Time to calculate: " << sw.getString("totalTime") << std::endl;
 
 	return solution;
 }

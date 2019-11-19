@@ -1,4 +1,6 @@
 #pragma once
+#include "Stopwatch.h"
+
 #include <string>
 #include <vector>
 

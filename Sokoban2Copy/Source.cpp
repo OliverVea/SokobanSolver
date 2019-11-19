@@ -20,11 +20,15 @@ int main() {
 
 	std::vector<Map::State> solution = IDepthFirst::solve(map, state);
 
+	system("pause");
+
 	for (Map::State s : solution) {
+		system("cls");
 		Map::printMap(map, s, mapWidth);
 		std::this_thread::sleep_for(std::chrono::milliseconds(250));
-		system("cls");
 	}
+
+	system("pause");
 
 	return 0;
 }
