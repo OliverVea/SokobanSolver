@@ -130,6 +130,7 @@
     <ClInclude Include="Defs.h" />
     <ClInclude Include="Dictionary.h" />
     <ClInclude Include="IDepthFirst.h" />
+    <ClInclude Include="JSONReading.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="Stopwatch.h" />
   </ItemGroup>

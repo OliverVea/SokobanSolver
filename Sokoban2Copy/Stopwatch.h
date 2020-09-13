@@ -19,11 +19,11 @@ public:
 	Stopwatch();
 	~Stopwatch();
 
-	void addWatch(std::string watchName = "");
-	void start(std::string watchName = "");
-	void stop(std::string watchName = "");
-	double getTime(std::string watchName = "", Unit unit = Millisecond);
-	std::string getString(std::string watchName = "", int decimals = 3);
+	void addWatch(std::string watchName = ""); // Adds a new watch with the specified name.
+	void start(std::string watchName = ""); // Starts measuring time.
+	void stop(std::string watchName = ""); // Stops measuring time since start.
+	double getTime(std::string watchName = "", Unit unit = Millisecond); // Get time as value in the specified temporal unit.
+	std::string getString(std::string watchName = "", int decimals = 3); // Get time as string. Unit is calculated internally.
 	void print(std::string watchName = "");
 
 private:

@@ -1,6 +1,6 @@
 #include "IDepthFirst.h"
 
-std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state)
+std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state, Map::eHeuristic heuristic)
 {
 	Stopwatch sw;
 	sw.start("totalTime");
@@ -18,12 +18,13 @@ std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state)
 	for (int i = 0; i < THREAD_COUNT; i++) {
 		std::mutex& mStopThread = vmStopThread[i];
 		int& bStopThread = vbStopThread[i];
-		results[i] = std::async(std::launch::async, [map, &a, &b, &mStopThread, &bStopThread, &pastBest, &openSet, i] { return task(map, a, b, mStopThread, bStopThread, pastBest, openSet, i == 0); });
+		results[i] = std::async(std::launch::async, [map, &a, &b, &mStopThread, &bStopThread, &pastBest, &openSet, heuristic] { return task(map, a, b, mStopThread, bStopThread, pastBest, openSet, heuristic); });
 	}
 
 	bool gotSolution = false;
-	while (!gotSolution) {
+	while (!gotSolution && pastBest.size() < MAX_STATES) {
 		for (int i = 0; i < THREAD_COUNT; i++) gotSolution |= results[i]._Is_ready();
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
 
 	for (int i = 0; i < THREAD_COUNT; i++) {
@@ -45,7 +46,7 @@ std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state)
 
 	std::vector<Map::State> solution;
 
-	while (!(bestState == Map::State())) {
+	while (!(bestState == Map::State() || bestState == state)) {
 		solution.push_back(bestState);
 		hash_t bestHash = bestState.getHash();
 		auto pastBestPair = pastBest[bestHash];
@@ -61,7 +62,7 @@ std::vector<Map::State> IDepthFirst::solve(Map map, Map::State state)
 	return solution;
 }
 
-Map::State IDepthFirst::task(const Map& map, std::mutex& a, std::mutex& b, std::mutex& mStopThread, int& bStopThread, std::unordered_map<hash_t, std::pair<heu_t, hash_t>>& pastBest, std::priority_queue<Map::State, std::vector<Map::State>, Map::StateComparison>& openSet, bool printStates)
+Map::State IDepthFirst::task(const Map& map, std::mutex& a, std::mutex& b, std::mutex& mStopThread, int& bStopThread, std::unordered_map<hash_t, std::pair<heu_t, hash_t>>& pastBest, std::priority_queue<Map::State, std::vector<Map::State>, Map::StateComparison>& openSet, Map::eHeuristic heuristic)
 {
 	Map::State currentState;
 	int i = 0;
@@ -86,13 +87,7 @@ Map::State IDepthFirst::task(const Map& map, std::mutex& a, std::mutex& b, std::
 		openSet.pop();
 		a.unlock();
 
-		if (false) {
-			system("cls");
-			Map::printMap(map, currentState, 12);
-			std::this_thread::sleep_for(std::chrono::milliseconds(500));
-		}
-
-		std::vector<Map::State> newStates = map.getChildStates(currentState);
+		std::vector<Map::State> newStates = map.getChildStates(currentState, heuristic);
 
 		for (Map::State newState : newStates) {
 			hash_t hash = newState.getHash();
@@ -105,8 +100,9 @@ Map::State IDepthFirst::task(const Map& map, std::mutex& a, std::mutex& b, std::
 				a.lock();
 				openSet.push(newState);
 				a.unlock();
+				const hash_t currentHash = currentState.getHash();
 				b.lock();
-				pastBest[hash] = { newState.getHeuristic(), currentState.getHash() };
+				pastBest[hash] = { newState.getHeuristic(), currentHash };
 				b.unlock();
 			}
 		}

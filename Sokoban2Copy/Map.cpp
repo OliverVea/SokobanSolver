@@ -33,7 +33,7 @@ std::vector<pos_t> Map::getConnectedArea(const pos_t& position, const State& sta
 
 	for (size_t i = 0; i < result.size(); i++) {
 		pos_t& currentPos = result[i];
-		for (dir_t dir : directions) {
+		for (pos_t dir : directions) {
 			const pos_t newPos = currentPos + dir;
 			if (Map::isValid(newPos, map) && !alreadyChecked[newPos]) {
 				if (Map::isFree(newPos, map) && !state.containsBox(newPos)) result.push_back(newPos);
@@ -55,7 +55,19 @@ std::vector<pos_t> Map::getConnectedArea(const pos_t& position, const State& sta
 	return Map::getConnectedArea(position, state, map, width);
 }
 
-const std::vector<Map::State> Map::getChildStates(const State& parentState) const
+const pos_t Map::getDistance(pos_t a, pos_t b) const
+{
+	pos_t distance = 0;
+	pos_t ax = a % width, bx = b % width, ay = a / width, by = b / width;
+	return std::max(ax, bx) - std::min(ax, bx) + std::max(ay, by) - std::min(ay, by);
+}
+
+const bool Map::containsTarget(pos_t p) const
+{
+	return (std::find(targetPositions.begin(), targetPositions.end(), p) != targetPositions.end());;
+}
+
+const std::vector<Map::State> Map::getChildStates(const State& parentState, const eHeuristic& futureExpenseHeuristic) const
 {
 	std::vector<Map::State> newStates;
 	std::vector<pos_t> freeNeighbors = getNeighbors(parentState.playerPos, map, width, {eFree, eNobox});
@@ -64,6 +76,20 @@ const std::vector<Map::State> Map::getChildStates(const State& parentState) cons
 		dir_t dir = newPlayerPos - parentState.playerPos;
 		State newState = parentState.move(dir);
 
+		switch (futureExpenseHeuristic) {
+		case eHeuNone:
+			break;
+
+		case eHeuSparse:
+			newState.futureExpense = 0;
+			for (const pos_t& pT : targetPositions) {
+				pos_t minDist = getDistance(pT, newState.boxPositions[0]);
+				for (int i = 1; i < newState.boxPositions.size(); i++) minDist = std::min(minDist, getDistance(pT, newState.boxPositions[i]));
+				newState.futureExpense += minDist * costs::forward;
+			}
+			break;
+		}
+
 		if (!parentState.containsBox(newPlayerPos)) newStates.push_back(newState);
 		else {
 			pos_t newBoxPos = newPlayerPos + dir;
@@ -71,7 +97,7 @@ const std::vector<Map::State> Map::getChildStates(const State& parentState) cons
 				std::replace(newState.boxPositions.begin(), newState.boxPositions.end(), newPlayerPos, newBoxPos);
 				newStates.push_back(newState);
 			}
-		}
+		}	
 	}
 
 	return newStates;
@@ -133,6 +159,7 @@ Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec)
 			}
 		}
 	}
+	else throw(std::invalid_argument("Received empty map vector."));
 
 	const std::vector<pos_t> w = { width, height };
 	const std::vector<pos_t> d = { width, 1 };
@@ -208,14 +235,14 @@ Map Map::loadMap(const std::vector<std::vector<tile_t>>& mapVec)
 	return Map(map, targetPositions, width, height, initialState);
 }
 
-void Map::printMap(const Map& map, const State& state, const pos_t & width)
+void Map::printMap(const Map& map, const State& state)
 {
 	std::unordered_map<eTileType, tile_t> dic = Map::dic.getA();
 
 	for (pos_t i = 0; i < map.map.size(); i++) {
-		pos_t x = i % width, y = i / width;
+		pos_t x = i % map.width, y = i / map.width;
 
-		bool isTarget = (std::find(map.targetPositions.begin(), map.targetPositions.end(), i) != map.targetPositions.end());
+		bool isTarget = map.containsTarget(i);
 		bool isBox = state.containsBox(i);
 
 		if (isTarget && isBox) std::cout << dic[eBoxOnTarget];
@@ -223,7 +250,7 @@ void Map::printMap(const Map& map, const State& state, const pos_t & width)
 		else if (isBox) std::cout << dic[eBox];
 		else if (i == state.playerPos) std::cout << dic[ePlayer];
 		else std::cout << dic[map.map[i]];
-		if (x == width - 1) std::cout << std::endl;
+		if (x == map.width - 1) std::cout << std::endl;
 	}
 }
 
@@ -236,7 +263,7 @@ std::vector<pos_t> Map::getNeighbors(const pos_t& i, const std::vector<eTileType
 	if ((i % width) > 0) neighbors.push_back(i - 1);
 	if ((i % width) < (width - 1)) neighbors.push_back(i + 1);
 
-	for (dir_t p : neighbors) if (std::find(tiles.begin(), tiles.end(), map[p]) != tiles.end()) freeNeighbors.push_back(p);
+	for (pos_t p : neighbors) if (std::find(tiles.begin(), tiles.end(), map[p]) != tiles.end()) freeNeighbors.push_back(p);
 	return freeNeighbors;
 }
 
@@ -313,7 +340,7 @@ const bool Map::State::containsBox(pos_t position) const
 	return false;
 }
 
-const Map::State Map::State::move(dir_t direction) const
+const Map::State Map::State::move(pos_t direction) const
 {
 	State newState = *this;
 

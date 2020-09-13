@@ -11,6 +11,7 @@ class Map
 {
 public:
 	enum eTileType { eNull, eFree, eWall, eTarget, ePlayer, eBox, eBoxOnTarget, eNobox };
+	enum eHeuristic { eHeuNone, eHeuSparse };
 	struct State {
 		pos_t playerPos = 0; // Player position
 		dir_t playerDir = 1;
@@ -29,7 +30,7 @@ public:
 		const bool operator==(const State& s) const;
 		const bool containsBox(pos_t position) const;
 
-		const State move(dir_t direction) const;
+		const State move(pos_t direction) const;
 	}; 
 	static Dictionary<tile_t, Map::eTileType> dic;
 
@@ -50,7 +51,10 @@ public:
 	pos_t getFirstPosInConnectedArea(const pos_t& position, const State& state);
 	std::vector<pos_t> getConnectedArea(const pos_t& position, const State& state);
 
-	const std::vector<Map::State> getChildStates(const State& parentState) const;
+	const pos_t getDistance(pos_t a, pos_t b) const;
+	const bool containsTarget(pos_t p) const;
+
+	const std::vector<Map::State> getChildStates(const State& parentState, const eHeuristic& futureExpenseHeuristic) const;
 	const pos_t getMaxPos() const;
 	const State getInitialState() const;
 
@@ -61,7 +65,7 @@ public:
 	const bool isFree(const pos_t& pos) const;
 
 	static Map loadMap(const std::vector<std::vector<tile_t>>& map);
-	static void printMap(const Map& map, const State& state, const pos_t& width);
+	static void printMap(const Map& map, const State& state);
 	static std::vector<pos_t> getNeighbors(const pos_t& position, const std::vector<eTileType>& map, const pos_t& width, const std::vector<eTileType>& tiles);
 	static bool contains(const eTileType& tile, const std::vector<eTileType>& tiles);
 
